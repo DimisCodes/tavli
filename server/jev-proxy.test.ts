@@ -98,6 +98,53 @@ describe('jev proxy', () => {
     expect(last).toBe(429);
   });
 
+  it('retries a transient upstream failure and succeeds', async () => {
+    // Production hit a one-off 520 from the edge in front of OpenRouter.
+    let calls = 0;
+    const impl = vi.fn(async () => {
+      calls++;
+      return calls === 1
+        ? new Response('bad gateway', { status: 520 })
+        : new Response(JSON.stringify({ answers: { q: { noul: 0.5 } }, usage: {} }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const res = await handleJev(post(goodBody()), env, { fetchImpl: impl, sleep: async () => {} });
+    expect(res.status).toBe(200);
+    expect(calls).toBe(2);
+  });
+
+  it('retries a network failure', async () => {
+    let calls = 0;
+    const impl = vi.fn(async () => {
+      calls++;
+      if (calls < 3) throw new Error('ECONNRESET');
+      return new Response(JSON.stringify({ answers: {}, usage: {} }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const res = await handleJev(post(goodBody()), env, { fetchImpl: impl, sleep: async () => {} });
+    expect(res.status).toBe(200);
+    expect(calls).toBe(3);
+  });
+
+  it('gives up after the attempt limit and reports the last status', async () => {
+    let calls = 0;
+    const impl = vi.fn(async () => {
+      calls++;
+      return new Response('overloaded', { status: 529 });
+    }) as unknown as typeof fetch;
+    const res = await handleJev(post(goodBody()), env, { fetchImpl: impl, sleep: async () => {} });
+    expect(res.status).toBe(502);
+    expect(calls).toBe(3);
+  });
+
+  it('does not retry a non-transient upstream error', async () => {
+    let calls = 0;
+    const impl = vi.fn(async () => {
+      calls++;
+      return new Response('unauthorized', { status: 401 });
+    }) as unknown as typeof fetch;
+    await handleJev(post(goodBody()), env, { fetchImpl: impl, sleep: async () => {} });
+    expect(calls).toBe(1);
+  });
+
   it('does not leak upstream error detail', async () => {
     const impl = vi.fn(async () => new Response('account suspended, balance -5.00', { status: 402 })) as unknown as typeof fetch;
     const res = await handleJev(post(goodBody()), env, { fetchImpl: impl });

@@ -23,6 +23,16 @@ export const MAX_SCORE_LEVELS = 10;
 export const RATE_LIMIT_REQUESTS = 40;
 export const RATE_LIMIT_WINDOW_MS = 60_000;
 
+/**
+ * Transient upstream failures are retried. Observed in production: a single 520 from the
+ * edge in front of OpenRouter, where the identical request succeeded immediately after.
+ * Without a retry that blip silently costs a turn its position read, because the caller
+ * treats a failed read as "no read" and carries on with defaults.
+ */
+export const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504, 520, 522, 524, 529]);
+export const MAX_ATTEMPTS = 3;
+export const BACKOFF_MS = [200, 600];
+
 export interface ProxyEnv {
   /** OpenRouter key. Absent means the endpoint reports itself unconfigured. */
   OPENROUTER_API_KEY?: string;
@@ -36,6 +46,8 @@ export interface HandlerOptions {
   /** Injected in tests so the hardening can be checked without network access. */
   fetchImpl?: typeof fetch;
   now?: () => number;
+  /** Injected in tests so retry backoff does not make the suite slow. */
+  sleep?: (ms: number) => Promise<void>;
 }
 
 const json = (status: number, body: unknown): Response =>
@@ -165,30 +177,43 @@ export async function handleJev(request: Request, env: ProxyEnv, opts: HandlerOp
     );
   }
 
-  let upstream: Response;
-  try {
-    upstream = await doFetch(UPSTREAM, {
-      method: 'POST',
-      headers: {
-        // Only headers we control are forwarded; nothing from the client is passed through.
-        authorization: `Bearer ${key}`,
-        'content-type': 'application/json',
-        'HTTP-Referer': env.SITE_URL ?? 'https://github.com',
-        'X-Title': 'Tavli',
-      },
-      body: JSON.stringify(checked.value),
-    });
-  } catch {
-    return fail(502, 'Could not reach Jev');
+  const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  const init: RequestInit = {
+    method: 'POST',
+    headers: {
+      // Only headers we control are forwarded; nothing from the client is passed through.
+      authorization: `Bearer ${key}`,
+      'content-type': 'application/json',
+      'HTTP-Referer': env.SITE_URL ?? 'https://github.com',
+      'X-Title': 'Tavli',
+    },
+    body: JSON.stringify(checked.value),
+  };
+
+  let lastStatus = 0;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    if (attempt > 0) await sleep(BACKOFF_MS[attempt - 1] ?? BACKOFF_MS[BACKOFF_MS.length - 1]);
+
+    let upstream: Response;
+    try {
+      upstream = await doFetch(UPSTREAM, init);
+    } catch {
+      lastStatus = 0; // network failure; worth another try
+      continue;
+    }
+
+    if (upstream.ok) {
+      return new Response(await upstream.text(), {
+        status: 200,
+        headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+      });
+    }
+
+    lastStatus = upstream.status;
+    if (!RETRYABLE_STATUS.has(upstream.status)) break;
   }
 
-  const payload = await upstream.text();
-  if (!upstream.ok) {
-    // Upstream errors can mention account state, so only the status is surfaced.
-    return fail(upstream.status === 429 ? 429 : 502, `Jev request failed (${upstream.status})`);
-  }
-  return new Response(payload, {
-    status: 200,
-    headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
-  });
+  // Upstream errors can mention account state, so only the status is surfaced.
+  if (lastStatus === 0) return fail(502, 'Could not reach Jev');
+  return fail(lastStatus === 429 ? 429 : 502, `Jev request failed (${lastStatus})`);
 }
