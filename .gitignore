@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-server
+.vercel
+.netlify
+openrouter.txt
+.env
+.env.*
+!.env.example
+*.log
+shots/
+reports/
+.playwright-mcp/

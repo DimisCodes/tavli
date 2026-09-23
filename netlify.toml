@@ -1,0 +1,5 @@
+[build]
+  command = "yarn build"
+  publish = "dist"
+
+# The edge function declares its own path (/api/jev/*) in netlify/edge-functions/jev.ts.

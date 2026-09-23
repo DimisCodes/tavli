@@ -1,0 +1,16 @@
+node_modules
+dist
+dist-server
+.git
+.github
+openrouter.txt
+.env
+.env.*
+!.env.example
+shots
+reports
+.playwright-mcp
+.dev-server.log
+.preview.log
+*.md
+!README.md
