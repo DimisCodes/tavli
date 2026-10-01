@@ -124,6 +124,16 @@ See [DEPLOY.md](DEPLOY.md). Short version: a proxy hides the key, but a spending
 what actually bounds your bill. There is a Dockerfile for container hosts such as Coolify, and
 one-file adapters for Vercel, Cloudflare Pages and Netlify.
 
+## Any screen, installable
+
+The board is the whole point, so on portrait phones the layout changes rather than the scale: the
+board turns a quarter turn into two columns of points with the bar as a strip between them, the
+controls become a fixed bottom bar, and the Jev panel slides up as a sheet. Everything from a
+360px phone to a 4K monitor is covered by `src/styles/app.css` and `src/styles/mobile.css`.
+
+It is also a progressive web app. The service worker caches the shell so the app opens instantly
+and installs to a home screen; Jev decisions are never cached because they are live and cost money.
+
 ## Layout
 
 ```
@@ -131,6 +141,7 @@ src/engine      rules, legal moves, risk pricing, race solver   (pure, tested)
 src/jev         System One client, and Jev as a player
 src/game        reducer state machine and the hook that runs turns
 src/components  Board, Dice, Cube, Controls, JevPanel, Inspector
+src/styles      app.css for desktop and tablet, mobile.css for the phone layout and PWA shell
 server          the API proxy, the production server, and their tests
 scripts         live evaluation harnesses
 docs            the tutorial

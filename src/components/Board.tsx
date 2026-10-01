@@ -1,7 +1,9 @@
 import { LayoutGroup, AnimatePresence, motion } from 'framer-motion';
+import type { CSSProperties } from 'react';
 import type { Color, From, Step, To } from '../engine/types';
 import { HUMAN, JEV, type GameState } from '../game/state';
 import type { GameActions } from '../game/useGame';
+import { PORTRAIT_PHONE, useMediaQuery } from '../game/useMediaQuery';
 import { Checker } from './Checker';
 import { Die } from './Dice';
 import { Cube } from './Cube';
@@ -18,9 +20,13 @@ const TOP_RIGHT = [18, 19, 20, 21, 22, 23];
 const BOTTOM_LEFT = [11, 10, 9, 8, 7, 6];
 const BOTTOM_RIGHT = [5, 4, 3, 2, 1, 0];
 
-function Stack({ ids, color, top }: { ids: string[]; color: Color; top: boolean }) {
+/** Overlap is expressed as a CSS variable so the stylesheet can decide which axis it applies to. */
+const overlapStyle = (o: number): CSSProperties | undefined =>
+  o > 0 ? ({ ['--o' as string]: o } as CSSProperties) : undefined;
+
+function Stack({ ids, color, top, capacity }: { ids: string[]; color: Color; top: boolean; capacity: number }) {
   const n = ids.length;
-  const overlap = n > 5 ? (n - 5) / (n - 1) : 0;
+  const overlap = n > capacity ? (n - capacity) / (n - 1) : 0;
   return (
     <div className={`point__stack${top ? ' point__stack--top' : ''}`}>
       {ids.map((id, i) => (
@@ -28,8 +34,8 @@ function Stack({ ids, color, top }: { ids: string[]; color: Color; top: boolean 
           key={id}
           id={id}
           color={color}
-          style={i > 0 && overlap ? { marginTop: `-${(overlap * 100).toFixed(1)}%` } : undefined}
-          badge={i === n - 1 && n > 5 ? n : undefined}
+          style={i > 0 ? overlapStyle(overlap) : undefined}
+          badge={i === n - 1 && n > capacity ? n : undefined}
         />
       ))}
     </div>
@@ -37,6 +43,10 @@ function Stack({ ids, color, top }: { ids: string[]; color: Color; top: boolean 
 }
 
 export function Board({ state, legal, onClickLocation }: Props) {
+  // In the vertical layout checkers stack along the point's width, which fits one fewer.
+  const vertical = useMediaQuery(PORTRAIT_PHONE);
+  const capacity = vertical ? 4 : 5;
+
   const humanTurn = state.phase === 'moving' && state.turn === HUMAN;
   const sources = new Set<From>(humanTurn ? legal.map((s) => s.from) : []);
   const targets = new Set<To>(
@@ -59,7 +69,7 @@ export function Board({ state, legal, onClickLocation }: Props) {
     return (
       <div key={idx} className={cls} onClick={() => onClickLocation(idx)} role="button" aria-label={`point ${idx + 1}`}>
         <div className="point__tri" />
-        {color && <Stack ids={stack} color={color} top={top} />}
+        {color && <Stack ids={stack} color={color} top={top} capacity={capacity} />}
         <span className="point__num">{idx + 1}</span>
         {targets.has(idx) && <span className="point__hint" />}
       </div>
@@ -77,7 +87,6 @@ export function Board({ state, legal, onClickLocation }: Props) {
   const dice = state.dice;
   const usedFlags: boolean[] = (() => {
     if (!dice) return [];
-    // Mark dice consumed this turn; for doubles show four.
     const all = dice[0] === dice[1] ? [dice[0], dice[0], dice[0], dice[0]] : [dice[0], dice[1]];
     const remaining = [...state.remaining];
     return all.map((d) => {
@@ -89,12 +98,18 @@ export function Board({ state, legal, onClickLocation }: Props) {
       return true;
     });
   })();
-  const isOpeningTurn = state.openingRoll !== null && state.log.length <= 2 && state.dice !== null &&
-    state.dice[0] === state.openingRoll.white && state.dice[1] === state.openingRoll.black && state.steps.length === 0 && state.phase !== 'to_roll';
+  const isOpeningTurn =
+    state.openingRoll !== null &&
+    state.log.length <= 2 &&
+    state.dice !== null &&
+    state.dice[0] === state.openingRoll.white &&
+    state.dice[1] === state.openingRoll.black &&
+    state.steps.length === 0 &&
+    state.phase !== 'to_roll';
 
   return (
     <LayoutGroup>
-      <div className={`board board--${mover}-turn`}>
+      <div className={`board board--${mover}-turn${vertical ? ' board--vertical' : ''}`}>
         <div className="board__frame">
           <div className="board__field">
             <div className="quadrant quadrant--tl">{TOP_LEFT.map((i) => renderPoint(i, true))}</div>
@@ -106,13 +121,13 @@ export function Board({ state, legal, onClickLocation }: Props) {
             >
               <div className="bar__half bar__half--top">
                 {barBlack.map((id, i) => (
-                  <Checker key={id} id={id} color={JEV} style={i > 0 ? { marginTop: '-55%' } : undefined} />
+                  <Checker key={id} id={id} color={JEV} style={i > 0 ? overlapStyle(0.55) : undefined} />
                 ))}
               </div>
               <Cube cube={state.cube} />
               <div className="bar__half bar__half--bottom">
                 {barWhite.map((id, i) => (
-                  <Checker key={id} id={id} color={HUMAN} style={i > 0 ? { marginBottom: '-55%' } : undefined} />
+                  <Checker key={id} id={id} color={HUMAN} style={i > 0 ? overlapStyle(0.55) : undefined} />
                 ))}
               </div>
             </div>
@@ -120,10 +135,10 @@ export function Board({ state, legal, onClickLocation }: Props) {
             <div className="quadrant quadrant--bl">{BOTTOM_LEFT.map((i) => renderPoint(i, false))}</div>
             <div className="quadrant quadrant--br">{BOTTOM_RIGHT.map((i) => renderPoint(i, false))}</div>
 
-            {/* Dice overlay */}
             <div className={`board__dice board__dice--${isOpeningTurn ? 'opening' : mover}`}>
-              {dice && !showOpening && (
-                isOpeningTurn ? (
+              {dice &&
+                !showOpening &&
+                (isOpeningTurn ? (
                   <>
                     <div className="board__dice-side board__dice-side--left">
                       <Die value={dice[0]} color={HUMAN} rollKey={rollKey + 'w'} used={usedFlags[0]} />
@@ -137,8 +152,7 @@ export function Board({ state, legal, onClickLocation }: Props) {
                     <Die value={dice[0]} color={mover} rollKey={rollKey + 'a'} used={usedFlags[0]} />
                     <Die value={dice[1]} color={mover} rollKey={rollKey + 'b'} used={usedFlags[1]} delay={0.07} />
                   </div>
-                )
-              )}
+                ))}
             </div>
           </div>
 
@@ -165,12 +179,7 @@ export function Board({ state, legal, onClickLocation }: Props) {
 
         <AnimatePresence>
           {state.phase === 'game_over' && state.result && (
-            <motion.div
-              className="board__overlay"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
+            <motion.div className="board__overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <motion.div
                 className={`result result--${state.result.winner}`}
                 initial={{ y: 18, scale: 0.96, opacity: 0 }}

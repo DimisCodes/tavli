@@ -31,10 +31,18 @@ function message(state: GameState): string {
   }
 }
 
-export function Controls({ state, actions }: { state: GameState; actions: GameActions }) {
+interface Props {
+  state: GameState;
+  actions: GameActions;
+  /** Opens the Jev panel as a sheet. Only rendered as a button on phone layouts (see CSS). */
+  onToggleJev?: () => void;
+}
+
+export function Controls({ state, actions, onToggleJev }: Props) {
   const humanRoll = state.phase === 'to_roll' && state.turn === HUMAN;
   const moving = state.phase === 'moving' && state.turn === HUMAN;
-  const busy = ['jev_cube', 'jev_thinking', 'jev_moving', 'human_doubled', 'no_move'].includes(state.phase) ||
+  const busy =
+    ['jev_cube', 'jev_thinking', 'jev_moving', 'human_doubled', 'no_move'].includes(state.phase) ||
     (state.phase === 'to_roll' && state.turn === JEV);
 
   return (
@@ -53,6 +61,12 @@ export function Controls({ state, actions }: { state: GameState; actions: GameAc
             {message(state)}
           </motion.p>
         </AnimatePresence>
+        {onToggleJev && (
+          <button className="jev-toggle" onClick={onToggleJev} aria-label="Show Jev's analysis">
+            <span className={`jev-toggle__dot jev-toggle__dot--${state.jev.status}`} />
+            Jev
+          </button>
+        )}
       </div>
 
       <div className="controls__buttons">

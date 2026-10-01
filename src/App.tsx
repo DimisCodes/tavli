@@ -10,6 +10,9 @@ import { JEV_MODEL } from './jev/client';
 export default function App() {
   const { state, legal, actions } = useGame();
   const [inspecting, setInspecting] = useState(false);
+  // On phones the Jev panel is a sheet that slides up over the board; on wider screens it is a
+  // column beside it and this state has no visible effect.
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   return (
     <div className="app">
@@ -33,10 +36,11 @@ export default function App() {
         </section>
         {/* Controls sit beside the board rather than under it. The board is width-limited on a
             typical screen, so a full-width row below it costs vertical space for nothing. */}
-        <div className="side-col">
-          <Controls state={state} actions={actions} />
-          <JevPanel state={state} onInspect={() => setInspecting(true)} />
+        <div className={`side-col${sheetOpen ? ' side-col--open' : ''}`}>
+          <Controls state={state} actions={actions} onToggleJev={() => setSheetOpen((o) => !o)} />
+          <JevPanel state={state} onInspect={() => setInspecting(true)} onClose={() => setSheetOpen(false)} />
         </div>
+        {sheetOpen && <div className="sheet-backdrop" onClick={() => setSheetOpen(false)} aria-hidden="true" />}
       </main>
 
       {inspecting && <Inspector state={state} onClose={() => setInspecting(false)} />}

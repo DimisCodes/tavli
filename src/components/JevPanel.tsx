@@ -93,7 +93,14 @@ function CandidateRow({ c, chosen, rank }: { c: RankedCandidate; chosen: boolean
   );
 }
 
-export function JevPanel({ state, onInspect }: { state: GameState; onInspect: () => void }) {
+interface Props {
+  state: GameState;
+  onInspect: () => void;
+  /** Closes the panel when it is shown as a sheet on phones. Hidden on wider layouts. */
+  onClose?: () => void;
+}
+
+export function JevPanel({ state, onInspect, onClose }: Props) {
   const { jev } = state;
   const move = jev.move;
   const read = move?.read;
@@ -103,6 +110,11 @@ export function JevPanel({ state, onInspect }: { state: GameState; onInspect: ()
 
   return (
     <aside className="jev-panel">
+      {onClose && (
+        <div className="sheet-handle" onClick={onClose} role="button" aria-label="Close Jev's analysis">
+          <span />
+        </div>
+      )}
       <header className="jev-panel__head">
         <span className={`jev-avatar${thinking ? ' jev-avatar--thinking' : ''}`} />
         <div className="jev-panel__id">
