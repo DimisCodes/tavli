@@ -126,13 +126,16 @@ one-file adapters for Vercel, Cloudflare Pages and Netlify.
 
 ## Any screen, installable
 
-The board is the whole point, so on portrait phones the layout changes rather than the scale: the
-board turns a quarter turn into two columns of points with the bar as a strip between them, the
-controls become a fixed bottom bar, and the Jev panel slides up as a sheet. Everything from a
-360px phone to a 4K monitor is covered by `src/styles/app.css` and `src/styles/mobile.css`.
+A backgammon board is twenty-four points wide, so on a phone it is only really playable sideways.
+Held in landscape the board takes the entire height of the screen and everything else is squeezed
+into a rail down the side, with Jev sliding in over the board when you want to read him. An upright
+phone is asked to turn; if yours is locked that way, the prompt steps aside and you get a board
+rotated a quarter turn into two columns of points instead. Everything from a 360px phone to a 4K
+monitor is covered by `src/styles/app.css` and `src/styles/mobile.css`.
 
 It is also a progressive web app. The service worker caches the shell so the app opens instantly
-and installs to a home screen; Jev decisions are never cached because they are live and cost money.
+and installs to a home screen, where the manifest asks for landscape; Jev decisions are never
+cached because they are live and cost money.
 
 ## Layout
 

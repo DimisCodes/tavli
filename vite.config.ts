@@ -21,7 +21,9 @@ export default defineConfig(({ mode }) => ({
         start_url: '/',
         scope: '/',
         display: 'standalone',
-        orientation: 'any',
+        // The board only works sideways, so an installed app opens that way and stays there.
+        // Browsers that ignore this (Safari) fall back to the rotate prompt in the app.
+        orientation: 'landscape',
         background_color: '#0c0b09',
         theme_color: '#0c0b09',
         categories: ['games', 'board'],

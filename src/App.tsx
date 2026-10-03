@@ -3,6 +3,7 @@ import { Board } from './components/Board';
 import { Controls } from './components/Controls';
 import { JevPanel } from './components/JevPanel';
 import { Inspector } from './components/Inspector';
+import { RotatePrompt } from './components/RotatePrompt';
 import { Scoreboard } from './components/Scoreboard';
 import { useGame } from './game/useGame';
 import { JEV_MODEL } from './jev/client';
@@ -13,6 +14,9 @@ export default function App() {
   // On phones the Jev panel is a sheet that slides up over the board; on wider screens it is a
   // column beside it and this state has no visible effect.
   const [sheetOpen, setSheetOpen] = useState(false);
+  // The board wants landscape. Upright phones are asked to turn until they say otherwise;
+  // a phone locked to portrait has to be able to get past this.
+  const [upright, setUpright] = useState(false);
 
   return (
     <div className="app">
@@ -44,6 +48,7 @@ export default function App() {
       </main>
 
       {inspecting && <Inspector state={state} onClose={() => setInspecting(false)} />}
+      {!upright && <RotatePrompt onDismiss={() => setUpright(true)} />}
     </div>
   );
 }

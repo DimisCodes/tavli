@@ -496,3 +496,246 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* ==================================================================== landscape phone
+   A backgammon board is wide and short, so a phone held sideways is the only way it is really
+   playable. Here the board takes the full height of the screen and everything else is squeezed
+   into a narrow rail down the side. The page never scrolls.
+
+   `.stage { display: contents }` dissolves the stage into the app grid, which is what lets the
+   board span both rows of the first column while the header and the rail stack in the second.
+
+      ┌───────────────────────────────┬────────┐
+      │                               │ brand  │
+      │            board              │ score  │
+      │        (full height)          ├────────┤
+      │                               │ Jev    │
+      │                               │ status │
+      │                               │ Roll   │
+      └───────────────────────────────┴────────┘                                           */
+@media (orientation: landscape) and (max-height: 500px) {
+  .app {
+    height: 100dvh;
+    overflow: hidden;
+    grid-template-columns: minmax(0, 1fr) clamp(142px, 23vw, 250px);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 6px 8px;
+    padding: 6px calc(8px + env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom))
+      calc(8px + env(safe-area-inset-left));
+  }
+
+  .stage {
+    display: contents;
+  }
+
+  .table-col {
+    grid-area: 1 / 1 / 3 / 2;
+    justify-content: center;
+    gap: 0;
+  }
+
+  /* Two caps: the width of its own column, and the height of the screen. On a wide phone the
+     height binds first and the spare width either side is unusable, because the board cannot
+     grow into it without growing taller than the screen. The divisor is the board's ratio and
+     the 12px is this grid's own vertical padding. */
+  .board {
+    max-width: min(100%, calc((100dvh - 12px) / 0.674));
+  }
+
+  /* ---- rail header: brand over score, the model badge does not fit ---- */
+  .topbar {
+    grid-area: 1 / 2;
+    grid-template-columns: 1fr;
+    justify-items: stretch;
+    text-align: left;
+    gap: 4px;
+    padding: 0;
+  }
+  .brand {
+    font-size: 15px;
+    gap: 6px;
+  }
+  .brand__vs {
+    font-size: 11px;
+  }
+  .model-badge {
+    display: none;
+  }
+  /* With the "match to 5" middle hidden, the two scores need pushing apart or they read as
+     one number. */
+  .scoreboard {
+    justify-self: stretch;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 3px 10px;
+  }
+  .scoreboard__mid {
+    display: none;
+  }
+  .scoreboard__name {
+    font-size: 9px;
+    letter-spacing: 0.06em;
+  }
+  .scoreboard__pts {
+    font-size: 16px;
+  }
+
+  /* ---- rail body: the controls, stacked ---- */
+  .side-col {
+    grid-area: 2 / 2;
+    position: static;
+    max-height: none;
+    min-height: 0;
+    overflow-y: auto;
+    gap: 8px;
+  }
+  /* The stacked form, restated: the wide-but-short rule for tablets also matches a phone in
+     landscape and would otherwise lay the controls out in a row. */
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    padding: 9px 10px;
+    gap: 8px;
+    border-radius: 14px;
+  }
+  /* The Jev chip carries his status light, so it reads as the rail's header rather than as a
+     button buried under the status line. `order` moves it without touching the markup. */
+  .jev-toggle {
+    display: inline-flex;
+    order: -1;
+    width: 100%;
+    margin-left: 0;
+    justify-content: center;
+  }
+  .controls__status {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  /* A basis small enough that the message always starts on the turn dot's row instead of
+     wrapping below it and leaving the dot stranded. */
+  .controls__message {
+    flex: 1 1 60px;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .controls__buttons {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .controls__buttons .btn {
+    width: 100%;
+    flex: none;
+    min-height: 40px;
+    padding: 9px 10px;
+    font-size: 13px;
+  }
+  .controls__buttons .btn--text {
+    min-height: 32px;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  /* ---- Jev slides in from the edge he is already on ---- */
+  .jev-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    width: min(400px, 82vw);
+    max-height: none;
+    overflow-y: auto;
+    gap: 12px;
+    padding: 8px 14px calc(14px + env(safe-area-inset-bottom));
+    padding-right: calc(14px + env(safe-area-inset-right));
+    border-radius: 20px 0 0 20px;
+    border-right: 0;
+    transform: translateX(104%);
+    transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow: -20px 0 60px rgba(0, 0, 0, 0.6);
+  }
+  .side-col--open .jev-panel {
+    transform: translateX(0);
+  }
+  .sheet-handle {
+    display: flex;
+  }
+  .sheet-backdrop {
+    display: block;
+  }
+  .reads {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==================================================================== rotate prompt
+   Only ever seen on an upright phone. Everywhere else it is not rendered at all. */
+.rotate {
+  display: none;
+}
+
+@media (max-width: 760px) and (orientation: portrait) {
+  .rotate {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 32px 28px calc(32px + env(safe-area-inset-bottom));
+    text-align: center;
+    background:
+      radial-gradient(700px 420px at 50% 28%, rgba(94, 234, 212, 0.09), transparent 65%),
+      var(--bg);
+  }
+
+  .rotate__phone {
+    display: grid;
+    place-items: center;
+    width: 58px;
+    height: 96px;
+    border: 2.5px solid var(--text-3);
+    border-radius: 13px;
+    animation: rotate-hint 2.8s ease-in-out infinite;
+  }
+
+  .rotate__screen {
+    width: 38px;
+    height: 62px;
+    border-radius: 4px;
+    background: var(--jev-soft);
+  }
+
+  @keyframes rotate-hint {
+    0%,
+    22% {
+      transform: rotate(0deg);
+    }
+    52%,
+    86% {
+      transform: rotate(-90deg);
+    }
+    100% {
+      transform: rotate(0deg);
+    }
+  }
+
+  .rotate__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 27px;
+    font-weight: 400;
+  }
+
+  .rotate__body {
+    margin: 0;
+    max-width: 19em;
+    color: var(--text-2);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+}
