@@ -59,7 +59,10 @@ export function Board({ state, legal, onClickLocation }: Props) {
     const cls = [
       'point',
       top ? 'point--top' : 'point--bottom',
-      idx % 2 === (top ? 1 : 0) ? 'point--alt' : '',
+      // Colour alternates on the index, not on the column, so a point is always the opposite
+      // colour to the one facing it across the board. The two rows run in opposite directions
+      // (top is 12+c, bottom is 11-c), so one parity rule gives both rows inverted patterns.
+      idx % 2 === 1 ? 'point--alt' : '',
       sources.has(idx) ? 'point--source' : '',
       state.selected === idx ? 'point--selected' : '',
       targets.has(idx) ? 'point--target' : '',
